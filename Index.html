@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<script src="https://d3js.org/d3.v7.min.js"></script>
+	<title>
+		Interactive Function and Derivative Visualizer
+	</title>
+</head>
+<body>
+	<div id="chart"></div>
+	<span id="current">0</span>
+	<br>
+	<label for="angle-slider">Slider: </label>
+	<input type="range" id="angle-slider" step=".1">
+	<br>
+	<label for="kchange">K-Setting</label>
+	<input type="range" id="kchange">
+	<br>
+	<label for="gchange">G-setting</label>
+	<input type="range" id="gchange">
+
+	<script>;
+		// Array to hold the data points for the main function graph (f(x))
+		let graph = [];
+		// Array to hold the data points for the derivative function graph (f'(x))
+		let grapd = [];
+
+		/**
+		* Initializes the min, max, step, and current value for a range input slider.
+		* @param {HTMLElement} id - The slider element.
+		* @param {number} a - The initial value.
+		* @param {number[]} b - An array where b[0] is the amount to subtract from 'a' for min, and b[1] is the amount to add for max.
+		* @param {number} c - The step value.
+		*/
+		function infun(id, a, b, c) {
+			id.min = a - b[0]; // Set the minimum value for the slider;
+			id.max = a + b[1]; // Set the maximum value for the slider;
+			id.step = c; // Set the step size;
+			id.value = a; // Set the initial value;
+		};
+
+		/**
+		* Recalculates the data points for both the main graph (graph) and the derivative graph (grapd).
+		* This is called when K or G settings are changed.
+		*/
+		function n3w() {
+			graph = []; // Reset the main graph data;
+			grapd = []; // Reset the derivative graph data;
+			// Iterate from val[0] to val[1] with a step of val[2] to generate data points
+			for (let i = val[0]; i <= val[1]; i += val[2]) {
+				graph.push({
+					x: i,
+					y: cal(i)
+				}); // Push main function result;
+				grapd.push({
+					x: i,
+					y: dal(i)
+				}); // Push derivative function result;
+			};
+			console.log("BAKA"); // Logging for debugging (meaning 'stupid' or 'idiot' in Japanese, often used jokingly);
+		};
+
+		/**
+		* Finds the min or max value for the x or y property across two arrays of data points.
+		* @param {string} a - The property to check ('x' or 'y').
+		* @param {string} b - The comparison type ('>' for max, anything else for min).
+		* @param {Array<Array<Object>>} c - An array containing the two data arrays ([graph, grapd]).
+		* @returns {number} The min or max value;
+		*/
+		lar = (a, b, c) => {
+			// Concatenate the two data arrays (graph and grapd)
+			let ret = c[0].concat(c[1]);
+			// Return max if b is ">", otherwise return min. Check 'x' or 'y' based on 'a';
+			return (b == ">") ?
+			((a == "x") ? d3.max(ret, d => d.x): d3.max(ret, d => d.y)):
+			((a == "x") ? d3.min(ret, d => d.x): d3.min(ret, d => d.y));
+		};
+
+		/**
+		* Calculates the sine of an angle (a) given in degrees.
+		* @param {number} a - Angle in degrees;
+		* @returns {number} The sine value;
+		*/
+		sin = (a) => {
+			return Math.sin(a * (Math.PI / 180)); // Convert degrees to radians and calculate sin;
+		};
+
+		/**
+		* Calculates the cosine of an angle (a) given in degrees.
+		* @param {number} a - Angle in degrees;
+		* @returns {number} The cosine value;
+		*/
+		cos = (a) => {
+			return Math.cos(a * (Math.PI / 180)); // Convert degrees to radians and calculate cos;
+		};
+
+		// Define chart margins
+		const margin = {
+			top: 20,
+			bot: 20,
+			// This is unused in the transform;
+			lef: 20,
+			rig: 20
+		};
+
+		// Define total chart dimensions (Twidth, Theight)
+		const Twidth = 360;
+		const Theight = 140;
+
+		// Calculate inner drawing area dimensions (width, height)
+		const width = Twidth - margin.lef - margin.rig;
+		const height = Theight - margin.top - margin.bot;
+
+		// Get the angle slider element
+		const slider = document.getElementById("angle-slider");
+		// Define the range [min, max, step] for the x-axis/slider
+		const val = [0, 360 * 4, .5];
+		// Initialize the angle slider with the defined range/step
+		infun(slider, val[0], [val[0], val[1]], val[2]);
+
+		// Get the span element to display the current x and y values
+		const value = document.getElementById("current");
+		// Set the initial slider value
+		slider.value = val[0];
+
+		// Get the K-setting slider element
+		const kset = document.getElementById("kchange");
+		// Initial value for the constant k
+		let k = .00005;
+		// Initialize the k slider (min/max are relative to the initial value);
+		infun(kset, k, [.05, .05], .000001);
+
+		// Get the G-setting slider element
+		const gset = document.getElementById("gchange");
+		// Initial value for the constant g
+		let g = 50;
+		// Initialize the g slider (min/max are relative to the initial value);
+		infun(gset, g, [100, 100], .1);
+
+		// Length of the tangent line to be drawn
+		const linel = 30;
+
+		/**
+		* The main function to be plotted: f(a) = (a/g)^2 * exp(-k*a)
+		* @param {number} a - The x-value (angle);
+		* @returns {number} The calculated y-value;
+		*/
+		cal = (a) => {
+			return ((a / g) ** 2) * (Math.exp(-k * a));
+		};
+
+		/**
+		* The derivative of the main function: f'(a)
+		* The derivative of f(x) = (x/g)^2 * exp(-k*x) is f'(x) = [ (2x/g^2) * exp(-k*x) ] + [ (x^2/g^2) * (-k * exp(-k*x)) ]
+		* @param {number} a - The x-value (angle);
+		* @returns {number} The calculated derivative value;
+		*/
+		dal = (a) => {
+			const a_squared_over_g_squared = (a * a) / (g * g); // (a/g)^2;
+			const two_a_over_g_squared = (2 * a) / (g * g); // 2a/g^2;
+			const exp_term = Math.exp(-k * a); // exp(-k*a);
+			// f'(a) = [ (2a/g^2) * exp(-k*a) ] + [ (a^2/g^2) * (-k * exp(-k*a)) ]
+			return (two_a_over_g_squared * exp_term) + (a_squared_over_g_squared * (-k * exp_term));
+		};
+
+		/**
+		* Calculates the angle of the tangent line at a specific point on the main graph (graph).
+		* It approximates the slope using the current point and the next point in the data array.
+		* @param {number} currentAngle - The current x-value;
+		* @returns {number} The angle in radians;
+		*/
+		function getTangentAngle(currentAngle) {
+			// Find the index of the current x-value in the data array
+			const currentIndex = graph.findIndex(d => d.x === currentAngle);
+			const currentPoint = graph[currentIndex];
+			const nextPoint = graph[currentIndex + 1];
+			// If points aren't found (e.g., at the end of the graph), return 0
+			if (!currentPoint || !nextPoint) return 0;
+			// Calculate the difference in scaled x coordinates (dx)
+			const dx = xScale(nextPoint.x) - xScale(currentPoint.x);
+			// Calculate the difference in scaled y coordinates (dy)
+			const dy = yScale(nextPoint.y) - yScale(currentPoint.y);
+			// Calculate the angle using Math.atan2(dy, dx)
+			return Math.atan2(dy, dx);
+		};
+
+		// Initialize the data arrays
+		n3w();
+
+		// Array to hold the single point being highlighted/tracked
+		let current = [{
+			x: 0,
+			y: cal(0)
+		}];
+
+		// Select the chart div and append the main SVG container
+		const svg = d3.select("#chart")
+		.append("svg")
+		.attr("width", Twidth)
+		.attr("height", Theight)
+		.append("g") // Append a group element for margins/translation
+		.attr("transform", `translate(${margin.lef}, ${margin.top})`);
+
+		// Define the X-axis linear scale
+		const xScale = d3.scaleLinear()
+		// Domain from the minimum x (0) to the maximum x in both data sets
+		.domain([val[0], lar("x", ">", [graph, grapd])])
+		.range([0, width]); // Range from 0 to inner width
+
+		// Define the Y-axis linear scale
+		const yScale = d3.scaleLinear()
+		// Domain from the minimum y to the maximum y in both data sets
+		.domain([lar("y", "<", [graph, grapd]), lar("y", ">", [graph, grapd])])
+		.range([height, 0]); // Range from inner height (bottom) to 0 (top)
+
+		/**
+		* Calculates the coordinates for the tangent line, centered at the current point.
+		* @param {number} angleRad - The tangent angle in radians;
+		* @returns {{x1: number, y1: number, x2: number, y2: number}} The start and end coordinates;
+		*/
+		dgrap = (angleRad) => {
+			const L = linel; // Half the length of the tangent line;
+			const centerX = xScale(current[0].x); // Scaled x-coordinate of the current point;
+			const centerY = yScale(current[0].y); // Scaled y-coordinate of the current point;
+			return {
+				// Calculate start point coordinates
+				x1: centerX - L * Math.cos(angleRad),
+				y1: centerY - L * Math.sin(angleRad),
+				// Calculate end point coordinates
+				x2: centerX + L * Math.cos(angleRad),
+				y2: centerY + L * Math.sin(angleRad)
+			};
+		};
+
+		// D3 line generator for converting data points to path 'd' attribute
+		const lineGenerator = d3.line()
+		.x(d => xScale(d.x)) // Use xScale for x coordinates;
+		.y(d => yScale(d.y)); // Use yScale for y coordinates;
+
+		// D3 axis generators
+		let xAxis = d3.axisBottom(xScale);
+		let yAxis = d3.axisLeft(yScale);
+
+		// Draw the main function curve (f(x)) in red
+		const baka = svg.append("path")
+		.datum(graph) // Bind the main data;
+		.attr("fill", "none")
+		.attr("stroke", "red")
+		.attr("stroke-width", 1)
+		.attr("d", lineGenerator); // Use the line generator;
+
+		// Draw the derivative function curve (f'(x)) in blue
+		const baki = svg.append("path")
+		.datum(grapd) // Bind the derivative data;
+		.attr("fill", "none")
+		.attr("stroke", "blue")
+		.attr("stroke-width", 1)
+		.attr("d", lineGenerator); // Use the line generator;
+
+		// Draw the X-axis at the center of the chart area (height/2)
+		svg.append("g")
+		.attr("class", "x Axis")
+		.attr("transform", `translate(0, ${height/2})`)
+		.call(xAxis);
+
+		// Draw a second X-axis at the bottom (height) - often used to define the visual bottom boundary
+		svg.append("g")
+		.attr("class", "x Axis")
+		.attr("transform", `translate(0, ${height})`)
+		.call(xAxis);
+
+		// Draw the Y-axis
+		const naku = svg.append("g")
+		.attr("class", "y Axis")
+		.call(yAxis);
+
+
+		// Draw the highlight circle (the moving point)
+		const highlightCircle = svg.selectAll(".highlight-circle")
+		.data(current) // Bind the single data point;
+		.enter()
+		.append("circle")
+		.attr("class", "highight") // Typo: should likely be "highlight";
+		.attr("r", .75)
+		.attr("fill", "#412dff")
+		.attr("stroke", "black");
+
+
+		// Initial calculation of tangent line coordinates
+		let io = dgrap(0);
+		// Draw the tangent line (initially pointing horizontally)
+		const line = svg.append("line")
+		.attr("class", "line")
+		.attr("stroke", "#dc3ffda7")
+		.attr("stroke-width", 1)
+		// Apply initial coordinates
+		.attr("x1", io.x1)
+		.attr("y1", io.y1)
+		.attr("x2", io.x2)
+		.attr("y2", io.y2);
+
+
+		/**
+		* Updates the position of the highlight circle and the tangent line based on a new x-value (angle).
+		* @param {number} newAngle - The new x-value;
+		*/
+		function update(newAngle) {
+			const newY = cal(newAngle); // Calculate the new y-value;
+			current[0].x = newAngle; // Update the x-value in the data;
+			current[0].y = newY; // Update the y-value in the data;
+
+			// Get the tangent angle in radians at the new point
+			const angleInRadians = getTangentAngle(newAngle);
+			// Calculate the new tangent line coordinates
+			const usagi = dgrap(angleInRadians);
+
+			// Transition and update the tangent line coordinates
+			line
+			.attr("x1", usagi.x1)
+			.attr("y1", usagi.y1)
+			.attr("x2", usagi.x2)
+			.attr("y2", usagi.y2);
+
+			// Update the highlight circle position
+			highlightCircle
+			.attr("cx", xScale(current[0].x)) // Scaled x;
+			.attr("cy", yScale(current[0].y)); // Scaled y;
+
+			// Update the displayed text value
+			value.textContent = `x = ${newAngle}  |||  y = ${newY}`;
+		};
+
+
+		/**
+		* Handles parameter changes (K or G). Recalculates all data, updates the scales, and redraws the curves.
+		* @param {number} angle - The current x-value to maintain the highlight circle position;
+		*/
+		function GeneralUpdate(angle) {
+			n3w(); // Recalculate all data points (graph and grapd);
+
+			// Update the Y-scale domain based on the new data range
+			yScale
+			.domain([lar("y", "<", [graph, grapd]), lar("y", ">", [graph, grapd])]);
+
+			// Redraw the main function curve with new data
+			baka
+			.datum(graph)
+			.attr("d", lineGenerator);
+
+			// Redraw the derivative curve with new data
+			baki
+			.datum(grapd)
+			.attr("d", lineGenerator);
+
+			update(angle); // Update the highlight point and tangent line;
+			naku.call(yAxis); // Redraw the Y-axis with the new scale;
+		};
+
+
+		// Event listener for the angle slider (controls the moving point)
+		slider.addEventListener("input", (e) => {
+			const angle = +e.target.value; // Get the slider value as a number;
+			update(angle); // Update the point position;
+		});
+
+
+		// Event listener for the K-setting slider (controls the 'k' parameter)
+		kset.addEventListener("input", (e) => {
+			k = +e.target.value; // Update the global 'k' variable (using + to ensure number type);
+			GeneralUpdate(current[0].x); // Re-run general update, keeping the current x-position;
+		});
+
+		// Event listener for the G-setting slider (controls the 'g' parameter)
+		gset.addEventListener("input", (e) => {
+			g = +e.target.value; // Update the global 'g' variable (using + to ensure number type);
+			GeneralUpdate(current[0].x); // Re-run general update, keeping the current x-position;
+		});
+
+		// Initial drawing of the highlight circle and line at the start position
+		update(val[0]);
+	</script>
+</body>
+</html>
