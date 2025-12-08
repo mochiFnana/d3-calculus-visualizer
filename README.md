@@ -1,69 +1,58 @@
 # d3-calculus-visualizer
 Interactive D3.js visualization exploring the function f(x) = (x/g)^2 e^{-kx}, its derivative, and the relationship between slope and tangent lines using real-time parameter controls.
-# 📈 Interactive D3.js Calculus Visualizer
+# 🌊 D3.js Advanced Trigonometry Visualizer: The Symmetric Parameterized Cosine Wave
 
-**A web-based tool for exploring the behavior of a parameterized exponential function and its derivative in real-time.**
-
-
+**An interactive, responsive web application that visualizes a complex, parameterized function, its mathematically correct derivative, and the visual concept of the tangent line.**
 
 ---
 
-## 💡 Project Goal
+## 🎯 Project Goal
 
-The primary goal of this project is to provide an intuitive, interactive environment for learning core calculus concepts, specifically:
+This visualization tool is designed to move beyond simple function plotting, serving as an advanced educational environment for calculus students and web developers. It allows for the real-time exploration of how external parameters affect the shape of a function and its derivative.
 
-1.  The **relationship between a function $f(x)$ and its derivative $f'(x)$**.
-2.  The visual meaning of the **tangent line slope** as the value of the derivative.
-3.  How changing **mathematical parameters ($k$ and $g$)** alters the shape of both the function and its derivative.
+## ✍️ Customization: Defining Your Own Mathematical Model
 
----
+The power of this project lies in its simplicity for customization. The entire mathematical model is defined by two JavaScript functions in the `<script>` block, allowing you to easily swap out the current trigonometric functions for any other differentiable function.
 
-## 📐 Mathematical Context
+### How to Change the Function
 
-The visualization plots two related curves:
+To visualize a new function, $h(x)$, and its derivative, $h'(x)$:
 
-### 1. Main Function (Red Curve)
+1.  **Edit `cal(a)`:** Define the function $h(x)$. This calculates the $y$-value for the **red curve**.
+2.  **Edit `dal(a)`:** Define the mathematically correct derivative, $h'(x)$. This calculates the $y$-value for the **blue curve**.
 
-The function being visualized combines polynomial growth and exponential decay:
+The D3.js framework will automatically handle the scaling, axis drawing, and dynamic updates based on your new definitions.
 
-$$f(x) = \left(\frac{x}{g}\right)^2 e^{-kx}$$
+### Current Model
 
-### 2. Derivative (Blue Curve)
+The project is currently configured to analyze the highly customizable **Symmetric Parameterized Cosine Wave**:
 
-The derivative represents the instantaneous slope of $f(x)$:
-
-$$f'(x) = \frac{2x}{g^2} e^{-kx} - \frac{kx^2}{g^2} e^{-kx}$$
-
----
-
-## 🚀 Usage
-
-To run this visualization, simply open the `index.html` file in any modern web browser. No server or complex setup is required, as all dependencies (D3.js) are loaded via CDN.
-
-### Interactive Controls
-
-The visualization is controlled by three range sliders at the bottom of the page:
-
-| Slider | Parameter | Effect |
+| Function | Mathematical Expression | Control |
 | :--- | :--- | :--- |
-| **Angle Slider** | **$x$** (Independent Variable) | **Highlights a point** on the red curve and draws the **tangent line**. The current $x$ and $f(x)$ values are displayed. |
-| **K-Setting** | **$k$** (Decay Constant) | Adjusts the strength of the **exponential decay** ($e^{-kx}$). Higher $k$ values cause the function to return to zero faster. |
-| **G-Setting** | **$g$** (Scaling Constant) | Adjusts the $\left(\frac{x}{g}\right)^2$ term. Controls the **initial rise** and the overall scaling and peak location of the function. |
+| **Main Function** | $f(x) = \cos(|x|^g) + \frac{k}{2}$ | Red Curve |
+| **Derivative** | $f'(x) = \frac{d}{dx} f(x)$ (Calculated via Chain Rule) | Blue Curve |
 
 ---
 
-## 🛠️ Technology Stack
+## ⚙️ Interactive Controls and Parameter Effects
 
-* **HTML:** Structure and control placement.
-* **D3.js v7:** Core library used for data binding, scaling, drawing the SVG graph, and handling all dynamic updates.
-* **Vanilla JavaScript:** Logic for parameter calculation, event handling, and managing the update cycle.
+The visualization is dynamically sized based on your screen width and controlled by four main interactive elements:
+
+| Control | Parameter | Description |
+| :--- | :--- | :--- |
+| **Angle Slider** | **$x$** (Independent Variable) | **Moves the highlight point** on the curve across the defined domain (e.g., $-360^\circ$ to $360^\circ$). |
+| **K-Setting** | **$k$** (Vertical Shift) | Controls the $\frac{k}{2}$ constant. Shifts both the function and its derivative **vertically**. |
+| **G-Setting** | **$g$** (Exponent Power) | Controls the $|x|^g$ term (range 0 to $\pi$). Drastically changes the **wave frequency and sharpens the curve** near $x=0$. |
+| **Tangent Line (Purple)** | N/A | Visually represents the instantaneous slope of $f(x)$ at the highlighted point. |
+
+### Key Visualization Feature
+
+A **Vertical Guide Line** connects the highlighted point on the $f(x)$ curve to the corresponding $y$-value on the $f'(x)$ curve. This visually proves that the **slope of the tangent line** on the red curve is exactly equal to the **height of the blue curve** at that $x$-position.
 
 ---
 
-## 🤝 Contributing
+## 🛠️ Technology and Structure
 
-This is a personal project, but feedback and suggestions for educational improvements or refactoring are welcome!
-
----
-
-**[Code for this project is entirely contained within the single `index.html` file.]**
+* **HTML/CSS:** Minimal structure, using flexbox for control layout and responsive CSS.
+* **D3.js v7:** Core library for all data binding, scaling, and SVG rendering.
+* **JavaScript:** Pure vanilla JS handling all math calculations, event listeners, and performance optimization (such as dynamic screen width handling and minimizing DOM updates).
