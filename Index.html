@@ -2,38 +2,439 @@
 <html>
 <head>
 	<script src="https://d3js.org/d3.v7.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.min.js"></script>
 	<style>
+		/* Simple centering and layout for controls */
 		.display {
 			display: flex;
 			flex-direction: column;
 			justify-content: center;
 			align-items: center;
 		}
-		#settings {
+		#settings, #inputs {
 			width: 100%;
 			display: flex;
 			flex-direction: column;
+			align-items: center;
 		}
-		input {
-			flex-grow: 1;
+		#inputs textarea {
+			width: 90vw;
+		}
+		#updt {
+			padding: 2vh;
+			margin: 5vh;
+		}
+		/* Added basic margin/padding for legibility */
+		#reset {
+			margin: 10vw;
+			padding: 2vw;
+		}
+		#inputs div {
+			margin-bottom: 10px;
 		}
 	</style>
 	<title>
-		Interactive Function and Derivative Visualizer
+		Interactive Symbolic Function and Derivative Visualizer
 	</title>
 </head>
 <body>
-<script>;
-		// Array to hold the data points for the main function graph (f(x))
-		let graph;
-		// Array to hold the data points for the derivative function graph (f'(x))
-		let grapd;
+	<div class="display">
+		<div id="chart"></div>
+
+		<div id="settings">
+			<span id="current">0</span>
+			<br>
+			<label for="angle-slider">Slider (a): </label>
+			<input type="range" id="angle-slider" step=".1">
+			<br>
+			<label for="kchange" id="kcv">K-Setting: </label>
+			<input type="range" id="kchange">
+			<br>
+			<label for="gchange" id="gcv">G-setting: </label>
+			<input type="range" id="gchange">
+		</div>
+
+		<div id="inputs">
+			<div class="firstInp">
+				<label for="fin">Y-Input (f(a, k, g)):</label>
+				<textarea type="text" id="fin">cos(abs(a))</textarea>
+			</div>
+			<div class="seconInp">
+				<label for="sin">Derivative Input (f'(a)): </label>
+				<textarea type="text" id="sin">if(a, -sin(abs(a))*(abs(a)/a))</textarea>
+			</div>
+			<button id="updt" onclick="reset()">APPLY NEW FUNCTIONS (RESET)</button>
+		</div>
+	</div>
+
+	<script>
+		// --- 1. GLOBAL VARIABLES AND SETUP ---
+
+		const Fin = document.getElementById("fin"); // Y-Input Text Area
+		const Sin = document.getElementById("sin"); // Derivative Input Text Area
+		let graph; // Data array for the main function (f(x))
+		let grapd; // Data array for the derivative (f'(x))
+
+		// Scope object used for math.js evaluation: {a: x-value, k: k-setting, g: g-setting}
+		let uir = {
+			k: 0,
+			g: 0,
+			a: 0
+		};
+
+		let Yinp = Fin.value; // Function string f(x)
+		let DYin = Sin.value; // Derivative string f'(x)
+		let Yin; // Compiled math.js function for f(x)
+		let DYi; // Compiled math.js function for f'(x)
+
+		// --- 2. CUSTOM MATH.JS FUNCTIONS ---
+
+		// Import custom functions to math.js to handle degree-based calculations and conditional logic.
+		math.import({
+			// Override default cos to allow a third argument (b) to switch between degrees (default) and radians.
+			cos: (a, b = true) => {
+				return b ? Math.cos(a * (Math.PI / 180)): Math.cos(a)
+			},
+			sin: (a, b = true) => {
+				return b ? Math.sin(a * (Math.PI / 180)): Math.sin(a)
+			},
+			tan: (a, b = true) => {
+				return b ? Math.tan(a * (Math.PI / 180)): Math.tan(a)
+			},
+			// Custom 'if' function to handle ternary logic (a ? b : c) and edge cases like x=0.
+			if: (a, b = 0, c = false) => {
+				// If c is not provided, assumes default 'else' is 0
+				return (c === false) ? ((a == 0) ? 0: b): (a ? b: c)
+			},
+		},
+			{
+				override: true
+			});
+
+		// --- 3. CORE UTILITY FUNCTIONS ---
+
+		/**
+		* Compiles a function string into an executable math.js expression.
+		* Includes error handling to alert the user if the syntax is invalid.
+		*/
+		function cmath(a) {
+			try {
+				if (a != "") {
+					return math.compile(a)
+				} else {
+					return math.compile("0")
+				}
+			} catch (error) {
+				alert("Function Compilation Error: " + error);
+				return math.compile("0");
+			}
+		}
 
 		/**
 		* Initializes the min, max, step, and current value for a range input slider.
 		*/
 		function infun(id, a, b, c) {
 			id.min = a - b[0];
+			id.max = a + b[1];
+			id.step = c;
+			id.value = a;
+		};
+
+		/**
+		* Recalculates all data points (graph and grapd) based on current parameters (k, g)
+		* and recompiles the functions if requested (con = true).
+		*/
+		function n3w(con = false) {
+			graph = [];
+			grapd = [];
+
+			// Update the parameters in the evaluation scope
+			uir.k = k;
+			uir.g = g;
+
+			// Recompile the function strings if the user hit the RESET button
+			if (con) {
+				Yin = cmath(Yinp);
+				DYi = cmath(DYin);
+			};
+
+			// Generate data points by iterating through the x-range
+			for (let i = -val[1][0]; i <= val[1][1]; i += val[2]) {
+				uir.a = i; // Set the current x-value
+
+				// Evaluate the compiled functions using the current scope (uir)
+				graph.push({
+					x: i,
+					y: Yin.evaluate(uir)
+				});
+				grapd.push({
+					x: i,
+					y: DYi.evaluate(uir)
+				});
+			};
+		};
+
+		/**
+		* Finds the max or min value across both data arrays for scaling the Y-axis.
+		*/
+		lar = (a, b = 1, c = "y") => {
+			let ret = a[0].concat(a[1]);
+			// If b >= 1 (max) or b < 1 (min)
+			return (b >= 1) ? ((c === "y") ? d3.max(ret, d => d.y): d3.max(ret, d => d.x)): ((c === "y") ? d3.min(ret, d => d.y): d3.min(ret, d => d.x))
+		};
+
+		// --- 4. VISUALIZATION SETUP (D3.js) ---
+
+		// Define and calculate responsive chart dimensions
+		let margin = {
+			top: 10,
+			bot: 1,
+			lef: 10,
+			rig: 10
+		};
+		const Twidth = screen.width;
+		const Theight = 140;
+		Object.entries(margin).forEach(([a, b])=> {
+			if (["lef", "rig"].includes(a)) {
+				margin[a] = (Twidth/100)*b;
+			} else if (["top"].includes(a)) {
+				margin[a] = (Theight/100)*b;
+			} else {
+				margin.bot = margin.lef*3.5
+			}
+		})
+		const width = Twidth - margin.lef - margin.rig;
+		const height = Theight - margin.top - margin.bot;
+
+		// Setup sliders
+		const slider = document.getElementById("angle-slider");
+		const val = [0, [360, 360], .5]; // x-range from -360 to 360
+		val[2] = (val[2] < .5) ? .5: val[2];
+		infun(slider, val[0], [val[1][0], val[1][1]], val[2]);
+
+		const value = document.getElementById("current");
+
+		const kset = document.getElementById("kchange");
+		let k = 0;
+		infun(kset, k, [10, 10], .01);
+
+		const gset = document.getElementById("gchange");
+		let g = 0;
+		infun(gset, g, [0, Math.PI], .001);
+
+		const kv = document.getElementById("kcv");
+		const gv = document.getElementById("gcv");
+		const linel = 20; // Length of tangent line half-segment
+
+		/**
+		* Calculates the angle of the tangent line (in radians) using the finite difference method
+		* between the current point and the next point.
+		*/
+		function getTangentAngle(currentAngle) {
+			const currentIndex = graph.findIndex(d => d.x === currentAngle);
+			const currentPoint = graph[currentIndex];
+			const nextPoint = graph[currentIndex + 1];
+			if (!currentPoint || !nextPoint) return 0;
+			const dx = xScale(nextPoint.x) - xScale(currentPoint.x);
+			const dy = yScale(nextPoint.y) - yScale(currentPoint.y);
+			return Math.atan2(dy, dx);
+		};
+
+		// Initial data generation (compiles default functions)
+		n3w(true);
+
+		// Initial highlight point data
+		let current = [{
+			x: 0,
+			y: Yin.evaluate(uir)
+		}];
+
+		// Append main SVG container and group for margin translation
+		const svg = d3.select("#chart")
+		.append("svg")
+		.attr("width", Twidth)
+		.attr("height", Theight)
+		.append("g")
+		.attr("transform", `translate(${margin.lef}, ${margin.top})`);
+
+		// Define X-scale (Domain: x-range, Range: pixel width)
+		const xScale = d3.scaleLinear()
+		.domain([-val[1][0], lar([graph, grapd], b = 1, c = "x")])
+		.range([0, width]);
+
+		// Define Y-scale (Domain: min/max y-values, Range: pixel height)
+		const yScale = d3.scaleLinear()
+		.domain([lar([graph, grapd], 0), lar([graph, grapd])])
+		.range([height, 0]);
+
+		/**
+		* Calculates the coordinates for the tangent line start (x1, y1) and end (x2, y2)
+		* based on the current point and the calculated angle.
+		*/
+		dgrap = (angleRad) => {
+			const L = linel;
+			const centerX = xScale(current[0].x);
+			const centerY = yScale(current[0].y);
+			return {
+				x1: centerX - L * Math.cos(angleRad),
+				y1: centerY - L * Math.sin(angleRad),
+				x2: centerX + L * Math.cos(angleRad),
+				y2: centerY + L * Math.sin(angleRad)
+			};
+		};
+
+		// D3 line generator (converts data points into SVG path string)
+		const lineGenerator = d3.line()
+		.x(d => xScale(d.x))
+		.y(d => yScale(d.y));
+
+		// D3 axis generators
+		let xAxis = d3.axisBottom(xScale);
+		let yAxis = d3.axisLeft(yScale);
+
+		// Draw f(x) curve (red)
+		const baka = svg.append("path")
+		.datum(graph)
+		.attr("fill", "none")
+		.attr("stroke", "red")
+		.attr("stroke-width", 1)
+		.attr("d", lineGenerator);
+
+		// Draw f'(x) curve (blue)
+		const baki = svg.append("path")
+		.datum(grapd)
+		.attr("fill", "none")
+		.attr("stroke", "blue")
+		.attr("stroke-width", 1)
+		.attr("d", lineGenerator);
+
+		// Draw X-axes (at y=0 line and at chart bottom)
+		svg.append("g").attr("class", "x Axis").attr("transform", `translate(0, ${height/2})`).call(xAxis);
+		svg.append("g").attr("class", "x Axis").attr("transform", `translate(0, ${height})`).call(xAxis);
+
+		// Draw Y-axis
+		const naku = svg.append("g").attr("class", "y Axis").call(yAxis);
+
+		// Draw highlight circle
+		const highlightCircle = svg.selectAll(".highlight-circle")
+		.data(current)
+		.enter()
+		.append("circle")
+		.attr("class", "highight")
+		.attr("r", .75)
+		.attr("fill", "#412dff")
+		.attr("stroke", "black");
+
+		// Draw tangent line
+		let io = dgrap(0);
+		const line = svg.append("line")
+		.attr("class", "line")
+		.attr("stroke", "#57009b8c")
+		.attr("stroke-width", 1.3)
+		.attr("x1", io.x1).attr("y1", io.y1).attr("x2", io.x2).attr("y2", io.y2);
+
+		// Draw vertical guide line
+		const vlin = svg.append("line")
+		.attr("class", "vlin")
+		.attr("stroke", "#57009b8c")
+		.attr("stroke-width", .5)
+		.attr("x1", current[0].x)
+		.attr("y1", yScale(lar([graph, grapd], 0)))
+		.attr("x2", current[0].x)
+		.attr("y2", yScale(lar([graph, grapd])));
+
+		// --- 5. UPDATE FUNCTIONS ---
+
+		/**
+		* Updates the position of the highlight circle, tangent line, and text display
+		* based on a new x-value (angle).
+		* @param {number} newAngle - The new x-value.
+		* @param {boolean} uli - Flag to update the vertical line (needed for slider movement).
+		*/
+		function update(newAngle, uli = false) {
+			uir.a = newAngle;
+			const newY = Yin.evaluate(uir); // Evaluate f(x) at the new x-value
+			current[0].x = newAngle;
+			current[0].y = newY;
+			const angleInRadians = getTangentAngle(newAngle);
+			const usagi = dgrap(angleInRadians);
+
+			// Update tangent line
+			line.attr("x1", usagi.x1).attr("y1", usagi.y1).attr("x2", usagi.x2).attr("y2", usagi.y2);
+
+			// Update vertical line position
+			if (uli) {
+				vlin.attr("x1", xScale(current[0].x))
+				.attr("y1", yScale(lar([graph, grapd], 0)))
+				.attr("x2", xScale(current[0].x))
+				.attr("y2", yScale(lar([graph, grapd])));
+			}
+
+			// Update highlight circle position
+			highlightCircle.attr("cx", xScale(current[0].x)).attr("cy", yScale(current[0].y));
+
+			// Update text displays
+			value.textContent = `x = ${newAngle} ||| y = ${newY}`;
+			kv.textContent = `K-setting : ${k}`;
+			gv.textContent = `G-setting : ${g}`;
+		};
+
+		/**
+		* Handles parameter changes (K or G). Recalculates data, updates scales, and redraws curves.
+		*/
+		function GeneralUpdate(angle) {
+			// Update Y-scale domain based on the new data range
+			yScale.domain([lar([graph, grapd], 0), lar([graph, grapd])]);
+
+			// Redraw curves
+			baka.datum(graph).attr("d", lineGenerator);
+			baki.datum(grapd).attr("d", lineGenerator);
+
+			// Redraw Y-axis
+			naku.call(yAxis);
+
+			// Update the point position
+			update(angle);
+		};
+
+		/**
+		* Called when the user clicks the "APPLY NEW FUNCTIONS (RESET)" button.
+		* Fetches new strings, recompiles the math, generates new data, and updates the display.
+		*/
+		function reset() {
+			Yinp = Fin.value;
+			DYin = Sin.value;
+			n3w(true); // Generate new data (and recompile math)
+			GeneralUpdate(current[0].x);
+		}
+
+		// --- 6. EVENT LISTENERS ---
+
+		// Slider 'a' (x-value)
+		slider.addEventListener("input", (e) => {
+			const angle = +e.target.value;
+			update(angle, true);
+		});
+
+		// Slider 'k' (parameter k)
+		kset.addEventListener("input", (e) => {
+			k = +e.target.value;
+			n3w(); // Generate new data (no recompile needed)
+			GeneralUpdate(current[0].x);
+		});
+
+		// Slider 'g' (parameter g)
+		gset.addEventListener("input", (e) => {
+			g = +e.target.value;
+			n3w(); // Generate new data (no recompile needed)
+			GeneralUpdate(current[0].x);
+		});
+
+		// Initial drawing
+		update(val[0]);
+	</script>
+</body>
+</html>
 			id.max = a + b[1];
 			id.step = c;
 			id.value = a;
